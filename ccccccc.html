@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jumping Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #000;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.js"></script>
+    <script>
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 300 },
+                    debug: false
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            }
+        };
+
+        const game = new Phaser.Game(config);
+
+        let player;
+        let cursors;
+        let obstacles;
+        let score = 0;
+        let scoreText;
+
+        function preload() {
+            this.load.image('sky', 'https://examples.phaser.io/assets/skies/space3.png');
+            this.load.image('ground', 'https://examples.phaser.io/assets/platforms/platform.png');
+            this.load.image('obstacle', 'https://examples.phaser.io/assets/sprites/bomb.png');
+            this.load.spritesheet('dude', 'https://examples.phaser.io/assets/sprites/dude.png', { frameWidth: 32, frameHeight: 48 });
+        }
+
+        function create() {
+            this.add.image(400, 300, 'sky');
+
+            const platforms = this.physics.add.staticGroup();
+            platforms.create(400, 568, 'ground').setScale(2).refreshBody();
+
+            player = this.physics.add.sprite(100, 450, 'dude');
+            player.setBounce(0.2);
+            player.setCollideWorldBounds(true);
+
+            this.anims.create({
+                key: 'left',
+                frames: this.anims.generateFrameNumbers('dude', { start: 0, end: 3 }),
+                frameRate: 10,
+                repeat: -1
+            });
+
+            this.anims.create({
+                key: 'turn',
+                frames: [{ key: 'dude', frame: 4 }],
+                frameRate: 20
+            });
+
+            this.anims.create({
+                key: 'right',
+                frames: this.anims.generateFrameNumbers('dude', { start: 5, end: 8 }),
+                frameRate: 10,
+                repeat: -1
+            });
+
+            cursors = this.input.keyboard.createCursorKeys();
+
+            obstacles = this.physics.add.group();
+            this.time.addEvent({
+                delay: 2000,
+                callback: addObstacle,
+                callbackScope: this,
+                loop: true
+            });
+
+            this.physics.add.collider(player, platforms);
+            this.physics.add.collider(obstacles, platforms);
+            this.physics.add.overlap(player, obstacles, hitObstacle, null, this);
+
+            scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#fff' });
+        }
+
+        function update() {
+            if (cursors.left.isDown) {
+                player.setVelocityX(-160);
+                player.anims.play('left', true);
+            } else if (cursors.right.isDown) {
+                player.setVelocityX(160);
+                player.anims.play('right', true);
+            } else {
+                player.setVelocityX(0);
+                player.anims.play('turn');
+            }
+
+            if (cursors.up.isDown && player.body.touching.down) {
+                player.setVelocityY(-330);
+            }
+        }
+
+        function addObstacle() {
+            const x = Phaser.Math.Between(800, 1200);
+            const obstacle = obstacles.create(x, 500, 'obstacle');
+            obstacle.setVelocityX(-200);
+            obstacle.setCollideWorldBounds(true);
+            obstacle.setBounce(1);
+        }
+
+        function hitObstacle(player, obstacle) {
+            this.physics.pause();
+            player.setTint(0xff0000);
+            player.anims.play('turn');
+            score = 0;
+            scoreText.setText('Score: ' + score);
+        }
+    </script>
+</body>
+</html>
